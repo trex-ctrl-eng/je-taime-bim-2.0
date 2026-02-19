@@ -1,0 +1,673 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>🦕 Dino Love - Um Presente Especial 💖</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Arial', sans-serif;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            overflow: hidden;
+        }
+
+        .container {
+            text-align: center;
+            position: relative;
+        }
+
+        .game-info {
+            background: rgba(255, 255, 255, 0.95);
+            padding: 20px;
+            border-radius: 15px;
+            margin-bottom: 20px;
+            display: flex;
+            justify-content: space-around;
+            align-items: center;
+            gap: 20px;
+            max-width: 600px;
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.1);
+        }
+
+        .info-item {
+            font-size: 18px;
+            font-weight: bold;
+            color: #333;
+        }
+
+        .info-label {
+            font-size: 12px;
+            color: #666;
+            display: block;
+            margin-bottom: 5px;
+        }
+
+        .info-value {
+            font-size: 28px;
+            color: #667eea;
+        }
+
+        #gameCanvas {
+            display: block;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: 5px solid #fff;
+            border-radius: 15px;
+            box-shadow: 0 20px 60px rgba(0, 0, 0, 0.3);
+            margin: 0 auto;
+            max-width: 90vw;
+            max-height: 90vh;
+        }
+
+        .instructions {
+            background: rgba(255, 255, 255, 0.9);
+            padding: 15px;
+            border-radius: 10px;
+            margin-top: 20px;
+            font-size: 14px;
+            color: #555;
+            max-width: 600px;
+        }
+
+        .instructions p {
+            margin: 8px 0;
+        }
+
+        /* Tela de Vitória */
+        .victory-screen {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: linear-gradient(135deg, #ff69b4 0%, #ff1493 50%, #ff69b4 100%);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            flex-direction: column;
+            animation: victoryFade 0.8s ease-out;
+        }
+
+        .victory-screen.show {
+            display: flex;
+        }
+
+        @keyframes victoryFade {
+            from {
+                opacity: 0;
+            }
+            to {
+                opacity: 1;
+            }
+        }
+
+        .victory-content {
+            text-align: center;
+            z-index: 1001;
+        }
+
+        .victory-text {
+            font-size: clamp(36px, 10vw, 80px);
+            font-weight: bold;
+            color: #fff;
+            text-shadow: 0 4px 15px rgba(0, 0, 0, 0.3);
+            margin: 20px 0;
+            animation: pulse 1.5s ease-in-out infinite;
+            letter-spacing: 2px;
+        }
+
+        @keyframes pulse {
+            0%, 100% {
+                transform: scale(1);
+                opacity: 1;
+            }
+            50% {
+                transform: scale(1.1);
+                opacity: 0.9;
+            }
+        }
+
+        .hearts {
+            font-size: 50px;
+            animation: float 3s ease-in-out infinite;
+        }
+
+        @keyframes float {
+            0%, 100% {
+                transform: translateY(0px);
+            }
+            50% {
+                transform: translateY(-20px);
+            }
+        }
+
+        .hearts-falling {
+            position: absolute;
+            font-size: 40px;
+            animation: fall 4s ease-in forwards;
+            pointer-events: none;
+        }
+
+        @keyframes fall {
+            from {
+                transform: translateY(0) rotate(0deg);
+                opacity: 1;
+            }
+            to {
+                transform: translateY(100vh) rotate(360deg);
+                opacity: 0;
+            }
+        }
+
+        /* Responsividade */
+        @media (max-width: 600px) {
+            .game-info {
+                flex-direction: column;
+                gap: 10px;
+                padding: 15px;
+            }
+
+            .info-value {
+                font-size: 24px;
+            }
+
+            .instructions {
+                font-size: 12px;
+            }
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Informações do Jogo -->
+        <div class="game-info">
+            <div class="info-item">
+                <span class="info-label">🍄 Cogumelos</span>
+                <span class="info-value" id="score">0</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">⏱️ Tempo</span>
+                <span class="info-value" id="timer">60</span>
+            </div>
+            <div class="info-item">
+                <span class="info-label">📏 Tamanho</span>
+                <span class="info-value" id="size">3</span>
+            </div>
+        </div>
+
+        <!-- Canvas do Jogo -->
+        <canvas id="gameCanvas"></canvas>
+
+        <!-- Instruções -->
+        <div class="instructions">
+            <p>🎮 <strong>Controles:</strong> Use as setas ⬆️⬇️⬅️➡️ ou WASD para mover</p>
+            <p>🍄 Colete 10 cogumelos antes do tempo acabar!</p>
+            <p>🔥 Evite os fogos - eles reduzem seu tamanho!</p>
+        </div>
+    </div>
+
+    <!-- Tela de Vitória -->
+    <div class="victory-screen" id="victoryScreen">
+        <div class="victory-content">
+            <div class="hearts" style="animation: float 3s ease-in-out infinite;">💖</div>
+            <div class="victory-text">Je t'aime, Bim</div>
+            <div class="hearts" style="animation: float 3s ease-in-out infinite 0.5s;">💖</div>
+        </div>
+    </div>
+
+    <script>
+        // ========================================
+        // CONFIGURAÇÕES DO JOGO
+        // ========================================
+        const canvas = document.getElementById('gameCanvas');
+        const ctx = canvas.getContext('2d');
+        const scoreDisplay = document.getElementById('score');
+        const timerDisplay = document.getElementById('timer');
+        const sizeDisplay = document.getElementById('size');
+        const victoryScreen = document.getElementById('victoryScreen');
+
+        // Redimensiona o canvas
+        function resizeCanvas() {
+            const maxWidth = Math.min(window.innerWidth - 40, 800);
+            const maxHeight = Math.min(window.innerHeight - 300, 600);
+            canvas.width = maxWidth;
+            canvas.height = maxHeight;
+        }
+        resizeCanvas();
+        window.addEventListener('resize', resizeCanvas);
+
+        // Constantes do jogo
+        const GRID_SIZE = 20;
+        const GAME_DURATION = 60; // segundos
+        const TARGET_MUSHROOMS = 10;
+        const INITIAL_LENGTH = 3;
+
+        // ========================================
+        // ESTADO DO JOGO
+        // ========================================
+        let dino = {
+            body: [
+                { x: Math.floor(canvas.width / (2 * GRID_SIZE)), y: Math.floor(canvas.height / (2 * GRID_SIZE)) }
+            ],
+            direction: { x: 1, y: 0 },
+            nextDirection: { x: 1, y: 0 }
+        };
+
+        // Adiciona o corpo inicial
+        for (let i = 1; i < INITIAL_LENGTH; i++) {
+            dino.body.push({
+                x: dino.body[0].x - i,
+                y: dino.body[0].y
+            });
+        }
+
+        let mushrooms = [];
+        let fires = [];
+        let score = 0;
+        let gameTime = GAME_DURATION;
+        let gameActive = true;
+        let gameStarted = false;
+        let audioStarted = false;
+
+        // ========================================
+        // ÁUDIO
+        // ========================================
+        const gameAudio = new Audio();
+        const victoryAudio = new Audio();
+
+        // Usa Web Audio API para criar sons suaves
+        function createGameMusic() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const oscillator = audioContext.createOscillator();
+            const gainNode = audioContext.createGain();
+            
+            oscillator.connect(gainNode);
+            gainNode.connect(audioContext.destination);
+            
+            gainNode.gain.setValueAtTime(0.3, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(400, audioContext.currentTime);
+            oscillator.frequency.setValueAtTime(300, audioContext.currentTime + 0.5);
+            oscillator.start();
+            oscillator.stop(audioContext.currentTime + 0.5);
+        }
+
+        function playGameMusic() {
+            if (!audioStarted) {
+                audioStarted = true;
+                // Toca uma melodia simples
+                const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+                playMelody(audioContext, [400, 500, 450, 600], 0.1);
+            }
+        }
+
+        function playMelody(audioContext, frequencies, delay) {
+            frequencies.forEach((freq, index) => {
+                const osc = audioContext.createOscillator();
+                const gain = audioContext.createGain();
+                osc.connect(gain);
+                gain.connect(audioContext.destination);
+                gain.gain.setValueAtTime(0.2, audioContext.currentTime + delay);
+                gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + delay + 0.2);
+                osc.frequency.value = freq;
+                osc.start(audioContext.currentTime + delay);
+                osc.stop(audioContext.currentTime + delay + 0.2);
+            });
+        }
+
+        function playVictoryMusic() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            playMelody(audioContext, [523, 659, 783, 659, 783, 1046], 0);
+        }
+
+        // ========================================
+        // GERAÇÃO DE ITENS
+        // ========================================
+        function generateRandomPosition() {
+            let pos;
+            let isValid = false;
+            while (!isValid) {
+                pos = {
+                    x: Math.floor(Math.random() * (canvas.width / GRID_SIZE)),
+                    y: Math.floor(Math.random() * (canvas.height / GRID_SIZE))
+                };
+                isValid = !dino.body.some(segment => segment.x === pos.x && segment.y === pos.y);
+            }
+            return pos;
+        }
+
+        function createMushroom() {
+            if (Math.random() < 0.02 && mushrooms.length < 5) {
+                mushrooms.push(generateRandomPosition());
+            }
+        }
+
+        function createFire() {
+            if (Math.random() < 0.015 && fires.length < 3) {
+                fires.push(generateRandomPosition());
+            }
+        }
+
+        // ========================================
+        // CONTROLES
+        // ========================================
+        document.addEventListener('keydown', (e) => {
+            playGameMusic();
+            const key = e.key.toLowerCase();
+            
+            // Setas
+            if (key === 'arrowup' || key === 'w') {
+                if (dino.direction.y === 0) dino.nextDirection = { x: 0, y: -1 };
+            }
+            if (key === 'arrowdown' || key === 's') {
+                if (dino.direction.y === 0) dino.nextDirection = { x: 0, y: 1 };
+            }
+            if (key === 'arrowleft' || key === 'a') {
+                if (dino.direction.x === 0) dino.nextDirection = { x: -1, y: 0 };
+            }
+            if (key === 'arrowright' || key === 'd') {
+                if (dino.direction.x === 0) dino.nextDirection = { x: 1, y: 0 };
+            }
+        });
+
+        // Controles por toque
+        let touchStartX = 0;
+        let touchStartY = 0;
+
+        canvas.addEventListener('touchstart', (e) => {
+            playGameMusic();
+            touchStartX = e.touches[0].clientX;
+            touchStartY = e.touches[0].clientY;
+        });
+
+        canvas.addEventListener('touchmove', (e) => {
+            e.preventDefault();
+            const touchEndX = e.touches[0].clientX;
+            const touchEndY = e.touches[0].clientY;
+            const diffX = touchEndX - touchStartX;
+            const diffY = touchEndY - touchStartY;
+
+            if (Math.abs(diffX) > Math.abs(diffY)) {
+                // Movimento horizontal
+                if (diffX > 0 && dino.direction.x === 0) {
+                    dino.nextDirection = { x: 1, y: 0 };
+                } else if (diffX < 0 && dino.direction.x === 0) {
+                    dino.nextDirection = { x: -1, y: 0 };
+                }
+            } else {
+                // Movimento vertical
+                if (diffY > 0 && dino.direction.y === 0) {
+                    dino.nextDirection = { x: 0, y: 1 };
+                } else if (diffY < 0 && dino.direction.y === 0) {
+                    dino.nextDirection = { x: 0, y: -1 };
+                }
+            }
+        });
+
+        // ========================================
+        // LÓGICA DO JOGO
+        // ========================================
+        function updateGame() {
+            if (!gameActive) return;
+
+            gameStarted = true;
+            dino.direction = dino.nextDirection;
+
+            // Move o dinossauro
+            const head = { ...dino.body[0] };
+            head.x += dino.direction.x;
+            head.y += dino.direction.y;
+
+            // Verifica colisão com as bordas (derrota)
+            if (head.x < 0 || head.x >= canvas.width / GRID_SIZE ||
+                head.y < 0 || head.y >= canvas.height / GRID_SIZE) {
+                endGame(false);
+                return;
+            }
+
+            // Verifica colisão com o próprio corpo
+            if (dino.body.some(segment => segment.x === head.x && segment.y === head.y)) {
+                endGame(false);
+                return;
+            }
+
+            dino.body.unshift(head);
+
+            // Verifica colisão com cogumelos
+            const mushroomIndex = mushrooms.findIndex(m => m.x === head.x && m.y === head.y);
+            if (mushroomIndex !== -1) {
+                score++;
+                mushrooms.splice(mushroomIndex, 1);
+                scoreDisplay.textContent = score;
+                sizeDisplay.textContent = dino.body.length;
+                playCollectSound();
+
+                if (score >= TARGET_MUSHROOMS) {
+                    endGame(true);
+                    return;
+                }
+            } else {
+                // Remove a cauda apenas se não coletou cogumelo
+                dino.body.pop();
+            }
+
+            // Verifica colisão com fogo
+            const fireIndex = fires.findIndex(f => f.x === head.x && f.y === head.y);
+            if (fireIndex !== -1) {
+                if (dino.body.length > INITIAL_LENGTH) {
+                    dino.body.pop();
+                    score = Math.max(0, score - 1);
+                    scoreDisplay.textContent = score;
+                    sizeDisplay.textContent = dino.body.length;
+                    playHitSound();
+                }
+                fires.splice(fireIndex, 1);
+            } else {
+                sizeDisplay.textContent = dino.body.length;
+            }
+
+            createMushroom();
+            createFire();
+        }
+
+        function playCollectSound() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.1);
+            osc.frequency.value = 800;
+            osc.start();
+            osc.stop(audioContext.currentTime + 0.1);
+        }
+
+        function playHitSound() {
+            const audioContext = new (window.AudioContext || window.webkitAudioContext)();
+            const osc = audioContext.createOscillator();
+            const gain = audioContext.createGain();
+            osc.connect(gain);
+            gain.connect(audioContext.destination);
+            gain.gain.setValueAtTime(0.3, audioContext.currentTime);
+            gain.gain.exponentialRampToValueAtTime(0.01, audioContext.currentTime + 0.2);
+            osc.frequency.value = 200;
+            osc.start();
+            osc.stop(audioContext.currentTime + 0.2);
+        }
+
+        // ========================================
+        // RENDERIZAÇÃO
+        // ========================================
+        function drawGame() {
+            // Limpa o canvas
+            ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+            // Desenha o gradiente de fundo
+            const gradient = ctx.createLinearGradient(0, 0, canvas.width, canvas.height);
+            gradient.addColorStop(0, '#667eea');
+            gradient.addColorStop(1, '#764ba2');
+            ctx.fillStyle = gradient;
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+            // Desenha o dinossauro
+            drawDinosaur();
+
+            // Desenha cogumelos
+            drawMushrooms();
+
+            // Desenha fogos
+            drawFires();
+        }
+
+        function drawDinosaur() {
+            dino.body.forEach((segment, index) => {
+                const x = segment.x * GRID_SIZE + 2;
+                const y = segment.y * GRID_SIZE + 2;
+                const size = GRID_SIZE - 4;
+
+                // Corpo azul fofo
+                ctx.fillStyle = index === 0 ? '#4a9eff' : '#6bb3ff';
+                ctx.beginPath();
+                ctx.roundRect(x, y, size, size, 8);
+                ctx.fill();
+
+                // Borda mais clara
+                ctx.strokeStyle = '#ffffff';
+                ctx.lineWidth = 2;
+                ctx.stroke();
+
+                // Olhos e detalhes da cabeça
+                if (index === 0) {
+                    // Olhos
+                    ctx.fillStyle = '#000';
+                    ctx.beginPath();
+                    ctx.arc(x + 6, y + 6, 2, 0, Math.PI * 2);
+                    ctx.fill();
+                    ctx.beginPath();
+                    ctx.arc(x + size - 6, y + 6, 2, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    // Boca feliz
+                    ctx.strokeStyle = '#000';
+                    ctx.lineWidth = 1.5;
+                    ctx.beginPath();
+                    ctx.arc(x + size / 2, y + size / 2 + 2, 3, 0, Math.PI);
+                    ctx.stroke();
+                }
+            });
+        }
+
+        function drawMushrooms() {
+            mushrooms.forEach(mushroom => {
+                const x = mushroom.x * GRID_SIZE + GRID_SIZE / 2;
+                const y = mushroom.y * GRID_SIZE + GRID_SIZE / 2;
+
+                // Chapéu do cogumelo (vermelho)
+                ctx.fillStyle = '#ff6b6b';
+                ctx.beginPath();
+                ctx.arc(x, y - 4, 8, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Pé do cogumelo (branco)
+                ctx.fillStyle = '#fff';
+                ctx.fillRect(x - 2, y, 4, 6);
+
+                // Bolinhas no chapéu
+                ctx.fillStyle = '#fff';
+                ctx.beginPath();
+                ctx.arc(x - 3, y - 6, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(x + 3, y - 4, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+                ctx.beginPath();
+                ctx.arc(x, y - 2, 1.5, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        function drawFires() {
+            fires.forEach(fire => {
+                const x = fire.x * GRID_SIZE + GRID_SIZE / 2;
+                const y = fire.y * GRID_SIZE + GRID_SIZE / 2;
+
+                // Chama laranja
+                ctx.fillStyle = '#ff9500';
+                ctx.beginPath();
+                ctx.ellipse(x, y, 6, 10, 0, 0, Math.PI * 2);
+                ctx.fill();
+
+                // Ponta amarela
+                ctx.fillStyle = '#ffb700';
+                ctx.beginPath();
+                ctx.ellipse(x, y - 4, 4, 6, 0, 0, Math.PI * 2);
+                ctx.fill();
+            });
+        }
+
+        // ========================================
+        // FINAL DO JOGO
+        // ========================================
+        function endGame(victory) {
+            gameActive = false;
+
+            if (victory) {
+                playVictoryMusic();
+                setTimeout(() => {
+                    victoryScreen.classList.add('show');
+                    // Cria corações caindo
+                    for (let i = 0; i < 20; i++) {
+                        setTimeout(() => {
+                            const heart = document.createElement('div');
+                            heart.className = 'hearts-falling';
+                            heart.textContent = '💖';
+                            heart.style.left = Math.random() * 100 + '%';
+                            victoryScreen.appendChild(heart);
+                            setTimeout(() => heart.remove(), 4000);
+                        }, i * 100);
+                    }
+                }, 300);
+            } else {
+                alert('Game Over! Tente novamente! 🦕');
+                location.reload();
+            }
+        }
+
+        // ========================================
+        // TIMER
+        // ========================================
+        const timerInterval = setInterval(() => {
+            if (gameActive) {
+                gameTime--;
+                timerDisplay.textContent = gameTime;
+
+                if (gameTime <= 0) {
+                    clearInterval(timerInterval);
+                    endGame(false);
+                }
+            }
+        }, 1000);
+
+        // ========================================
+        // LOOP PRINCIPAL
+        // ========================================
+        setInterval(() => {
+            updateGame();
+            drawGame();
+        }, 100);
+
+        // Inicia com um item
+        mushrooms.push(generateRandomPosition());
+    </script>
+</body>
+</html>
