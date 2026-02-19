@@ -1,0 +1,143 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <title>Je t’aime, Bim 🫶</title>
+  <style>
+    body {
+      margin: 0;
+      overflow: hidden;
+      background: linear-gradient(#5dade2, #e74c3c);
+      font-family: 'Arial', sans-serif;
+    }
+
+    canvas {
+      display: block;
+      margin: auto;
+      background: #87ceeb;
+    }
+
+    .mensagem-final {
+      position: absolute;
+      top: 50%;
+      left: 50%;
+      transform: translate(-50%, -50%);
+      font-size: 48px;
+      color: white;
+      text-align: center;
+      display: none;
+      animation: brilho 2s infinite alternate;
+    }
+
+    @keyframes brilho {
+      from { text-shadow: 0 0 10px red; }
+      to { text-shadow: 0 0 25px pink; }
+    }
+  </style>
+</head>
+<body>
+
+<canvas id="game" width="600" height="300"></canvas>
+
+<div class="mensagem-final" id="mensagemFinal">
+  💖 Je t’aime, Bim 💖
+</div>
+
+<!-- 🎵 ÁUDIOS -->
+<audio id="musicaJogo" loop>
+  <source src="https://cdn.pixabay.com/audio/2022/03/15/audio_9c3a0c1c6e.mp3" type="audio/mpeg">
+</audio>
+
+<audio id="musicaFinal">
+  <source src="https://cdn.pixabay.com/audio/2021/09/06/audio_6b3c9d1e89.mp3" type="audio/mpeg">
+</audio>
+
+<script>
+const canvas = document.getElementById("game");
+const ctx = canvas.getContext("2d");
+
+const musicaJogo = document.getElementById("musicaJogo");
+const musicaFinal = document.getElementById("musicaFinal");
+let musicaIniciada = false;
+
+// 🎮 personagem
+let dino = { x: 50, y: 220, w: 40, h: 40, vy: 0, pulando: false };
+
+// 🍄 cogumelo
+let cogumelo = { x: 600, y: 240, w: 30, h: 30 };
+
+let jogoAtivo = true;
+
+function desenharDino() {
+  ctx.fillStyle = "#3498db";
+  ctx.fillRect(dino.x, dino.y, dino.w, dino.h);
+}
+
+function desenharCogumelo() {
+  ctx.fillStyle = "#e74c3c";
+  ctx.beginPath();
+  ctx.arc(cogumelo.x, cogumelo.y, 15, 0, Math.PI * 2);
+  ctx.fill();
+}
+
+function atualizar() {
+  if (!jogoAtivo) return;
+
+  ctx.clearRect(0, 0, canvas.width, canvas.height);
+
+  // gravidade
+  dino.vy += 1;
+  dino.y += dino.vy;
+
+  if (dino.y >= 220) {
+    dino.y = 220;
+    dino.vy = 0;
+    dino.pulando = false;
+  }
+
+  cogumelo.x -= 4;
+  if (cogumelo.x < -30) {
+    finalizarJogo();
+  }
+
+  desenharDino();
+  desenharCogumelo();
+
+  requestAnimationFrame(atualizar);
+}
+
+function pular() {
+  if (!dino.pulando) {
+    dino.vy = -15;
+    dino.pulando = true;
+  }
+}
+
+function finalizarJogo() {
+  jogoAtivo = false;
+  canvas.style.display = "none";
+  document.getElementById("mensagemFinal").style.display = "block";
+
+  // troca de música 💖
+  musicaJogo.pause();
+  musicaJogo.currentTime = 0;
+
+  musicaFinal.volume = 0.6;
+  musicaFinal.play();
+}
+
+// 🎵 iniciar música ao jogar
+window.addEventListener("keydown", () => {
+  if (!musicaIniciada) {
+    musicaJogo.volume = 0.3;
+    musicaJogo.play();
+    musicaIniciada = true;
+  }
+  pular();
+});
+
+atualizar();
+</script>
+
+</body>
+</html>
